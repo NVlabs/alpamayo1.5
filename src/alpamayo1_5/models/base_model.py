@@ -291,6 +291,7 @@ class ReasoningVLA(PreTrainedModel, TrajectoryFusionMixin):
 
     config_class: type[ReasoningVLAConfig] = ReasoningVLAConfig
     base_model_prefix: str = "vlm"
+    _supports_sdpa: bool = True
 
     def __init__(
         self,
