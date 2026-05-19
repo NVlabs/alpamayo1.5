@@ -9,6 +9,10 @@
 
 </div>
 
+## Updates
+
+- [May 2026] SFT and RL post-training scripts are available in [Alpamayo Recipes](https://github.com/NVlabs/alpamayo-recipes): [Alpamayo 1.5 SFT](https://github.com/NVlabs/alpamayo-recipes/tree/main/recipes/alpamayo1_5_sft) and [Alpamayo 1.x RL post-training](https://github.com/NVlabs/alpamayo-recipes/tree/main/recipes/alpamayo1_x_rl).
+
 **📖 Please read the [HuggingFace Model Card](https://huggingface.co/nvidia/Alpamayo-1.5-10B) first!**
 The model card contains comprehensive details on model architecture, inputs/outputs, licensing, and tested hardware configurations. This GitHub README focuses on setup, usage, and frequently asked questions.
 
