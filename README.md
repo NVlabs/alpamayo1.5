@@ -91,6 +91,13 @@ Alpamayo 1.5 provides two inference methods:
 
 - **`generate_text`** -- Text-only generation for visual question answering (VQA). Returns extracted text fields.
 
+## Fine-tuning and Post-training Recipes
+
+SFT and RL post-training scripts are maintained in [Alpamayo Recipes](https://github.com/NVlabs/alpamayo-recipes):
+
+- [Alpamayo 1.5 SFT](https://github.com/NVlabs/alpamayo-recipes/tree/main/recipes/alpamayo1_5_sft)
+- [Alpamayo 1.x RL post-training](https://github.com/NVlabs/alpamayo-recipes/tree/main/recipes/alpamayo1_x_rl), including Alpamayo 1.5
+
 ## Project Structure
 
 ```
