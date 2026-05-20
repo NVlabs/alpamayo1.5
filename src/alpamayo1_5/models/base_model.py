@@ -216,12 +216,15 @@ class ReasoningVLAConfig(PretrainedConfig):
         tokens_per_history_traj: int = 16,
         tokens_per_future_traj: int = 64,
         model_dtype: str = "bfloat16",
-        attn_implementation: str = "flash_attention_2",
+        attn_implementation: str | None = None,
         min_pixels: int | None = None,
         max_pixels: int | None = None,
         add_special_tokens: bool = False,
         **kwargs: Any,
     ) -> None:
+        if attn_implementation is None:
+            attn_implementation = "flash_attention_2"
+        kwargs["attn_implementation"] = attn_implementation
         super().__init__(**kwargs)
 
         self.vlm_name_or_path = vlm_name_or_path
@@ -291,6 +294,8 @@ class ReasoningVLA(PreTrainedModel, TrajectoryFusionMixin):
 
     config_class: type[ReasoningVLAConfig] = ReasoningVLAConfig
     base_model_prefix: str = "vlm"
+    _supports_sdpa: bool = True
+    _supports_flash_attn: bool = True
 
     def __init__(
         self,

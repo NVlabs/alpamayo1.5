@@ -98,6 +98,10 @@ class Alpamayo1_5(ReasoningVLA):
         if config.expert_cfg is not None:
             for key, value in config.expert_cfg.items():
                 setattr(expert_config, key, value)
+        # The diffusion expert does not support FlashAttention 2.
+        # Force sdpa for the expert in that case.
+        if expert_config._attn_implementation == "flash_attention_2":
+            expert_config._attn_implementation = "sdpa"
         self.expert = AutoModel.from_config(expert_config)
         # we don't need the embed_tokens of the expert model
         del self.expert.embed_tokens
