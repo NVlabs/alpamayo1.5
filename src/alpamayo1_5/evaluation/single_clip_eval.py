@@ -143,7 +143,7 @@ class SingleClipEvaluator:
         }
 
         _save_result(output, Path(cfg.output))
-        _print_summary(output, pred_xyz)
+        _print_summary(output, pred_xyz) 
 
         return output
 
@@ -232,9 +232,9 @@ def _print_summary(output: dict[str, Any], pred_xyz: torch.Tensor) -> None:
     print(f"minADE:           {output['minADE']:.6f} m")
     print(f"all_ADE:          {output['all_ADE']}")
 
-    _print_trajectory(pred_xyz, traj_index=0)
+    # _print_trajectory(pred_xyz, traj_index=0)
 
-    if output.get("cot"):
+    if output.get("cot") is not None:
         print("\n========== Chain-of-Causation ==========")
         print(output["cot"])
 

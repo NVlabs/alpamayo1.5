@@ -1,0 +1,44 @@
+{
+  "clip_id": "030c760c-ae38-49aa-9ad8-f5650a545d26",
+  "t0_us": 5100000,
+  "num_traj_samples": 16,
+  "minADE": 0.1226201057434082,
+  "all_ADE": [
+    0.1226201057434082,
+    1.8462951183319092,
+    1.0175502300262451,
+    0.8476450443267822,
+    0.8216369152069092,
+    1.0901161432266235,
+    2.7647407054901123,
+    0.8469518423080444,
+    0.6784101724624634,
+    1.2902019023895264,
+    1.8363008499145508,
+    1.06730055809021,
+    0.5050860643386841,
+    0.6638834476470947,
+    0.34886372089385986,
+    0.8137099742889404
+  ],
+  "cot": [
+    [
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Keep distance to the lead vehicle since it is directly ahead in our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Keep distance to the lead vehicle since it is directly ahead in our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Nudge to the left to clear the construction cones blocking the right side of our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Keep distance to the lead vehicle since it is directly ahead in our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Nudge to the left to clear the construction equipment blocking the right side of our lane",
+      "Keep distance to the lead vehicle since it is directly ahead in our lane"
+    ]
+  ]
+}
