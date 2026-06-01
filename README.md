@@ -83,6 +83,21 @@ python src/alpamayo1_5/test_inference.py
 In case you would like to obtain more trajectories and reasoning traces, please feel free to increase
 the `num_traj_samples` argument in the script.
 
+### Evaluation
+
+A structured CLI evaluator is available under `src/alpamayo1_5/evaluation/`.
+It loads a single clip, runs inference, computes **minADE** against the
+ground-truth future ego trajectory, and writes a JSON result file.
+
+```bash
+python src/alpamayo1_5/evaluation/single_clip_eval.py \
+    --num_traj_samples 16 \
+    --output outputs/eval.json
+```
+
+See [`src/alpamayo1_5/evaluation/README.md`](src/alpamayo1_5/evaluation/README.md)
+for the full list of options and the Python API.
+
 ### Interactive notebooks
 
 We provide notebooks that demonstrate the different capabilities of Alpamayo 1.5 under `notebooks/`, including standard model inference, incorporating navigation guidance, modifying the number of cameras, and visual question answering.
@@ -117,6 +132,10 @@ alpamayo_1.5_release/
 │       │   └── ...                      # Action space definitions
 │       ├── diffusion/
 │       │   └── ...                      # Diffusion model components
+│       ├── evaluation/
+│       │   ├── minade.py                # MinADE metric computation
+│       │   ├── single_clip_eval.py      # Single-clip evaluation CLI
+│       │   └── README.md                # Evaluation usage guide
 │       ├── geometry/
 │       │   └── ...                      # Geometry utilities and modules
 │       ├── models/
