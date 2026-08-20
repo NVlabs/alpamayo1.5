@@ -14,8 +14,9 @@
 # limitations under the License.
 
 import copy
-from functools import partial
 import logging
+from contextlib import nullcontext
+from functools import partial
 from typing import Any
 
 import einops
@@ -31,9 +32,13 @@ from transformers import (
 )
 
 from alpamayo1_5.action_space import ActionSpace
-from alpamayo1_5.models.base_model import ReasoningVLA
 from alpamayo1_5.config import Alpamayo1_5Config
 from alpamayo1_5.diffusion.base import BaseDiffusion
+from alpamayo1_5.models.base_model import ReasoningVLA
+from alpamayo1_5.models.diffusion_expert_cuda_graph import (
+    DiffusionExpertCudaGraph,
+    enable_diffusion_expert_cuda_graph,
+)
 from alpamayo1_5.models.token_utils import (
     StopAfterEOS,
     extract_text_tokens,
@@ -130,7 +135,28 @@ class Alpamayo1_5(ReasoningVLA):
             self.action_in_proj = self.action_in_proj.to(dtype=expert_dtype)
             self.action_out_proj = self.action_out_proj.to(dtype=expert_dtype)
 
+        self._diffusion_expert_cuda_graph: DiffusionExpertCudaGraph | None = None
         self.post_init()
+
+    def enable_diffusion_expert_cuda_graph(
+        self,
+        *,
+        max_batch_size: int,
+        max_graphs: int = 4,
+    ) -> None:
+        """Use bounded exact CUDA graphs for inference-time expert forwards."""
+        self._diffusion_expert_cuda_graph = enable_diffusion_expert_cuda_graph(
+            self.expert,
+            max_batch_size=max_batch_size,
+            max_graphs=max_graphs,
+        )
+
+    @property
+    def diffusion_expert_cuda_graph_stats(self) -> dict[str, int] | None:
+        """Return graph capture, replay, and eager-fallback counters when enabled."""
+        if self._diffusion_expert_cuda_graph is None:
+            return None
+        return self._diffusion_expert_cuda_graph.stats
 
     @staticmethod
     def _find_eos_offset(
@@ -365,13 +391,19 @@ class Alpamayo1_5(ReasoningVLA):
         if diffusion_kwargs is None:
             diffusion_kwargs = {}
 
-        sampled_action = self.diffusion.sample(
-            batch_size=total_batch,
-            step_fn=step_fn,
-            device=device,
-            return_all_steps=False,
-            **diffusion_kwargs,
+        graph_context = (
+            self._diffusion_expert_cuda_graph.sampling()
+            if self._diffusion_expert_cuda_graph is not None
+            else nullcontext()
         )
+        with graph_context:
+            sampled_action = self.diffusion.sample(
+                batch_size=total_batch,
+                step_fn=step_fn,
+                device=device,
+                return_all_steps=False,
+                **diffusion_kwargs,
+            )
 
         # Repeat history to align with num_traj_samples
         hist_xyz_rep = einops.repeat(
@@ -397,7 +429,7 @@ class Alpamayo1_5(ReasoningVLA):
         if kwargs.get("return_extra", False):
             extra = extract_text_tokens(self.tokenizer, vlm_outputs.sequences)
             # rearrange text tokens to shape [B, ns, nj] to match trajectory shape
-            for text_tokens in extra.keys():
+            for text_tokens in extra:
                 extra[text_tokens] = np.array(extra[text_tokens]).reshape(
                     [input_ids.shape[0], num_traj_sets, num_traj_samples]
                 )
@@ -644,24 +676,30 @@ class Alpamayo1_5(ReasoningVLA):
         if diffusion_kwargs is None:
             diffusion_kwargs = {}
 
-        sampled_action = self.diffusion.sample(
-            batch_size=total_batch,
-            step_fn=partial(
-                step_fn,
-                past_key_values=prompt_cache,
-                attention_mask=attention_mask,
-                position_ids=position_ids,
-            ),
-            unguided_step_fn=partial(
-                step_fn,
-                past_key_values=unguided_prompt_cache,
-                attention_mask=unguided_attention_mask,
-                position_ids=unguided_position_ids,
-            ),
-            device=device,
-            return_all_steps=False,
-            **diffusion_kwargs,
+        graph_context = (
+            self._diffusion_expert_cuda_graph.sampling()
+            if self._diffusion_expert_cuda_graph is not None
+            else nullcontext()
         )
+        with graph_context:
+            sampled_action = self.diffusion.sample(
+                batch_size=total_batch,
+                step_fn=partial(
+                    step_fn,
+                    past_key_values=prompt_cache,
+                    attention_mask=attention_mask,
+                    position_ids=position_ids,
+                ),
+                unguided_step_fn=partial(
+                    step_fn,
+                    past_key_values=unguided_prompt_cache,
+                    attention_mask=unguided_attention_mask,
+                    position_ids=unguided_position_ids,
+                ),
+                device=device,
+                return_all_steps=False,
+                **diffusion_kwargs,
+            )
 
         # Repeat history to align with num_traj_samples
         hist_xyz_rep = einops.repeat(
@@ -687,7 +725,7 @@ class Alpamayo1_5(ReasoningVLA):
         if kwargs.get("return_extra", False):
             extra = extract_text_tokens(self.tokenizer, vlm_outputs.sequences)
             # rearrange text tokens to shape [B, ns, nj] to match trajectory shape
-            for text_tokens in extra.keys():
+            for text_tokens in extra:
                 extra[text_tokens] = np.array(extra[text_tokens]).reshape(
                     [input_ids.shape[0], num_traj_sets, num_traj_samples]
                 )

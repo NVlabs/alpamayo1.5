@@ -103,6 +103,26 @@ Alpamayo 1.5 provides two inference methods:
 
 - **`generate_text`** -- Text-only generation for visual question answering (VQA). Returns extracted text fields.
 
+### Optional CUDA graph acceleration
+
+Repeated trajectory inference can replay the diffusion expert with exact-shape CUDA graphs. Enable
+this after moving the model to CUDA and calling `eval()`:
+
+```python
+model.eval()
+model.enable_diffusion_expert_cuda_graph(
+    max_batch_size=16,
+    max_graphs=4,
+)
+```
+
+Set `max_batch_size` to at least `batch_size * num_traj_samples * num_traj_sets`. The first
+supported input shape is captured lazily; up to `max_graphs` exact shape signatures are retained,
+and additional signatures fall back to eager execution. Captured graphs keep static CUDA buffers,
+so this option trades additional GPU memory for lower diffusion-expert launch overhead. Inspect
+`model.diffusion_expert_cuda_graph_stats` for capture, replay, and fallback counts.
+
+
 ## Fine-tuning and Post-training Recipes
 
 SFT and RL post-training scripts are maintained in [Alpamayo Recipes](https://github.com/NVlabs/alpamayo-recipes):
