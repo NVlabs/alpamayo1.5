@@ -1,0 +1,67 @@
+name: GPU tests
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: gpu-tests-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  gpu-tests:
+    name: CUDA tests (T4)
+    runs-on: alpamayo-gpu-t4
+    timeout-minutes: 20
+
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@v6
+        with:
+          enable-cache: true
+
+      - name: Install test dependencies
+        run: |
+          uv venv --python 3.12 .venv
+          uv pip install --python .venv/bin/python \
+            "pytest>=8,<10" \
+            "torch==2.8.0" \
+            "transformers==4.57.1"
+
+      - name: Verify CUDA runner
+        run: |
+          .venv/bin/python - <<'PY'
+          import torch
+
+          assert torch.cuda.is_available(), "CUDA is not available on the GPU runner"
+          print(f"PyTorch: {torch.__version__}")
+          print(f"CUDA runtime: {torch.version.cuda}")
+          print(f"GPU count: {torch.cuda.device_count()}")
+          for index in range(torch.cuda.device_count()):
+              print(f"GPU {index}: {torch.cuda.get_device_name(index)}")
+          PY
+
+      - name: Run tests
+        env:
+          PYTHONPATH: src
+        run: |
+          if .venv/bin/python -c \
+            "from pathlib import Path; raise SystemExit(not any(Path('tests').rglob('test_*.py')))"; then
+            .venv/bin/python -m pytest -q tests
+          else
+            echo "No test_*.py files found; CUDA runner smoke check passed."
+          fi
