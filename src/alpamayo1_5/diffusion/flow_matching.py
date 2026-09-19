@@ -62,6 +62,7 @@ class FlowMatching(BaseDiffusion):
         use_classifier_free_guidance: bool | None = None,
         inference_guidance_weight: float | None = None,
         temperature: float = 1.0,
+        generator: torch.Generator | list[torch.Generator] | None = None,
         *args,
         **kwargs,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
@@ -82,6 +83,9 @@ class FlowMatching(BaseDiffusion):
             inference_guidance_weight: The weight of the guidance during inference. (override self.inference_guidance_weight)
             temperature: The temperature for controlling the initial noise. Note that using
                 temperature < 1.0 will result in a more stable sampling with less diversity.
+            generator: The generator used for initial noise. A list of
+                generators (one per batch row) draws each row from its own
+                generator, enabling batched per-row deterministic sampling.
 
         Returns:
             torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
@@ -107,6 +111,7 @@ class FlowMatching(BaseDiffusion):
                 inference_guidance_weight=inference_guidance_weight,
                 use_classifier_free_guidance=use_classifier_free_guidance,
                 temperature=temperature,
+                generator=generator,
             )
         else:
             raise ValueError(f"Invalid integration method: {int_method}")
@@ -146,6 +151,7 @@ class FlowMatching(BaseDiffusion):
         inference_guidance_weight: float | None = None,
         use_classifier_free_guidance: bool | None = None,
         temperature: float = 1.0,
+        generator: torch.Generator | list[torch.Generator] | None = None,
     ) -> torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
         """Euler integration for flow matching.
 
@@ -163,12 +169,15 @@ class FlowMatching(BaseDiffusion):
             use_classifier_free_guidance: Whether to use classifier free guidance.
             temperature: The temperature for controlling the initial noise. Note that using
                 temperature < 1.0 will result in a more stable sampling with less diversity.
+            generator: The generator used for initial noise. A list of
+                generators (one per batch row) draws each row from its own
+                generator, enabling batched per-row deterministic sampling.
         Returns:
             torch.Tensor | tuple[torch.Tensor, torch.Tensor]:
                 The final sampled tensor [B, *x_dims] if return_all_steps is False,
                 otherwise a tuple of all sampled tensors [B, T, *x_dims] and the time steps [T].
         """
-        x = torch.randn(batch_size, *self.x_dims, device=device) * temperature
+        x = self._initial_noise(batch_size, device=device, generator=generator) * temperature
         time_steps = torch.linspace(0.0, 1.0, inference_step + 1, device=device)
         n_dim = len(self.x_dims)
         if return_all_steps:
@@ -194,3 +203,26 @@ class FlowMatching(BaseDiffusion):
         if return_all_steps:
             return torch.stack(all_steps, dim=1), time_steps
         return x
+
+    def _initial_noise(
+        self,
+        batch_size: int,
+        device: torch.device = torch.device("cpu"),
+        generator: torch.Generator | list[torch.Generator] | None = None,
+    ) -> torch.Tensor:
+        """Draw the initial Gaussian noise [batch_size, *x_dims].
+
+        A single generator (or None) seeds the whole batch at once. A list of
+        generators draws each batch row from its own generator, enabling
+        batched per-row deterministic sampling.
+        """
+        if isinstance(generator, list):
+            if len(generator) != batch_size:
+                raise ValueError(
+                    f"generator list length {len(generator)} must equal batch_size {batch_size}"
+                )
+            return torch.cat(
+                [torch.randn(1, *self.x_dims, device=device, generator=g) for g in generator],
+                dim=0,
+            )
+        return torch.randn(batch_size, *self.x_dims, device=device, generator=generator)
